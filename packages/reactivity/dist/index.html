@@ -9,19 +9,23 @@
 </head>
 
 <body>
-    <script src="../../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script>
+    <script src="./reactivity.global.js"></script>
     <div id="app"></div>
     <script>
         const { effect, reactive } = VueReactivity
-        const state = reactive({ name: 'lisen', age: 18 })
 
-        effect(() => {
-            app.innerHTML = state.name + state.age
-        })
+        const data = { name: 'lisen', age: 18, address: { num: 123 } }
+        const state1 = reactive(data)
+        const state2 = reactive(state1)
 
-        setTimeout(() => {
-            state.age = 25
-        }, 2000)
+        console.log(state1 == state2)
+        // effect(() => {
+        //     app.innerHTML = state.name + state.age
+        // })
+
+        // setTimeout(() => {
+        //     state.age = 25
+        // }, 2000)
     </script>
 </body>
 
