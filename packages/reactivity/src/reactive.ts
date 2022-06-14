@@ -1,12 +1,9 @@
 import { isObject } from "@vue/shared";
+import { mutableHandlers, ReactiveFlags } from "./baseHandler";
 
 // 数据转换成响应式数据, 只能做对象的代理
 
 const reactiveMap = new WeakMap(); // key只能是对象
-
-const enum ReactiveFlags {
-  IS_REACTIVE = "__v_isReactive",
-}
 
 export function reactive(target) {
   if (!isObject(target)) {
@@ -29,18 +26,7 @@ export function reactive(target) {
 
   // 第一次普通对象代理，我们会通过new Proxy代理一次
   // 下一次你传递的是proxy， 我们可以看一下他有没有被代理过，如果访问则个proxy， 有get方法就说明访问过了
-  const proxy = new Proxy(target, {
-    get(target, key, receiver) {
-      // 防止target被二次代理
-      if (key === ReactiveFlags.IS_REACTIVE) {
-        return true;
-      }
-      return Reflect.get(target, key, receiver);
-    },
-    set(target, key, value, receiver) {
-      return Reflect.set(target, key, value, receiver);
-    },
-  });
+  const proxy = new Proxy(target, mutableHandlers);
 
   reactiveMap.set(target, proxy);
   return proxy;

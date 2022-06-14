@@ -14,18 +14,15 @@
     <script>
         const { effect, reactive } = VueReactivity
 
-        const data = { name: 'lisen', age: 18, address: { num: 123 } }
-        const state1 = reactive(data)
-        const state2 = reactive(state1)
+        const state = reactive({ name: 'lisen', age: 18, address: { num: 123 } })
 
-        console.log(state1 == state2)
-        // effect(() => {
-        //     app.innerHTML = state.name + state.age
-        // })
+        effect(() => {
+            app.innerHTML = state.name + state.age
+        })
 
-        // setTimeout(() => {
-        //     state.age = 25
-        // }, 2000)
+        setTimeout(() => {
+            state.age = 25
+        }, 1000)
     </script>
 </body>
 
