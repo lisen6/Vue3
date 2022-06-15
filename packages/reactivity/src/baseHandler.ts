@@ -21,7 +21,7 @@ export const mutableHandlers = {
     let result = Reflect.set(target, key, value, receiver);
 
     // 新老值不一样才需要更新
-    if (oldValue !== result) {
+    if (oldValue !== value) {
       // 要更新
       trigger(target, "set", key, result, oldValue);
     }

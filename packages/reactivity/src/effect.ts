@@ -1,4 +1,13 @@
 export let activeEffect = undefined;
+
+function cleanUpEffect(effect) {
+  const { deps } = effect; // 这个deps里面对应的是name对应的effect
+  for (let i = 0; i < deps.length; i++) {
+    deps[i].delete(effect); // 解除effect， 重新收集依赖
+  }
+  effect.deps.length = 0;
+}
+
 class ReactiveEffect {
   public parent = null;
   public deps = []; // 记录当前effect被哪些属性收集了
@@ -13,6 +22,10 @@ class ReactiveEffect {
 
     try {
       this.parent = activeEffect; // 处理effect嵌套的情况
+
+      // 需要在执行用户函数之前，将之前收集的内容清空
+      cleanUpEffect(this);
+
       // 这里就要依赖收集， 核心就是将当前的effect和稍后渲染的属性关联在一起
       activeEffect = this;
       return this.fn(); // 当稍后调用取值操作的时候，就可以获取到这个全局的activeEffect
@@ -44,7 +57,7 @@ export function track(target, type, key) {
    *    effect(() => {
             app.innerHTML = state.name + state.age
         })
-        对象就是这个{name: 'lisen', age: 18}
+        对象就是这个源对象{name: 'lisen', age: 18}
         key是name跟age
         Set放入的就是这个effect(activeEffect)
         name跟age属性跟当前effect函数做关联
@@ -69,12 +82,15 @@ export function trigger(target, type, key, value, oldValue) {
   const depsMap = targetMap.get(target);
   if (!depsMap) return; // 触发的key不在模板中
 
-  const effects = depsMap.get(key); // 找到属性对应的effect
-  effects &&
+  let effects = depsMap.get(key); // 找到属性对应的effect
+
+  if (effects) {
+    effects = new Set(effects);
     effects.forEach((effect) => {
       // 我们在执行effect的时候，又要执行自己，那我们需要屏蔽掉，不要无限调用
       if (effect !== activeEffect) {
         effect.run();
       }
     });
+  }
 }
