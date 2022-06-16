@@ -9,26 +9,15 @@
 </head>
 
 <body>
-    <script src="./reactivity.global.js"></script>
+    <script src="../../../node_modules/@vue/reactivity/dist//reactivity.global.js"></script>
+    <!-- <script src="./reactivity.global.js"></script> -->
     <div id="app"></div>
     <script>
         const { effect, reactive } = VueReactivity
 
-        const state = reactive({ name: 'lubenwei', age: 18, flag: true })
+        const state = reactive({ firstName: 'li', lastName: 'sen' })
 
-        // 分支切换
-        effect(() => {
-            console.log('render')
-            app.innerHTML = state.flag ? state.name : state.age
-        })
-
-        setTimeout(() => {
-            state.flag = false;
-            setTimeout(() => {
-                console.log('修改name，原则上不更新')
-                state.name = 'lisen'
-            })
-        }, 1000)
+        const fullName = computed(() => state.firstName + state.lastName)
     </script>
 </body>
 

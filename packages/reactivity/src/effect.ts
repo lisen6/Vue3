@@ -12,7 +12,7 @@ class ReactiveEffect {
   public parent = null;
   public deps = []; // 记录当前effect被哪些属性收集了
   public active = true; // effect默认是激活状态
-  constructor(public fn) {}
+  constructor(public fn, public scheduler) {}
   run() {
     // run 执行effect
     if (!this.active) {
@@ -34,14 +34,25 @@ class ReactiveEffect {
       //   this.parent = null;
     }
   }
+  stop() {
+    if (this.active) {
+      this.active = false;
+      cleanUpEffect(this); // 停止effect收集
+    }
+  }
 }
 
-export function effect(fn) {
+export function effect(fn, options: any = {}) {
   // fn可以根据状态变化重新执行
 
-  const _effect = new ReactiveEffect(fn); // 创建响应式的effect
+  const _effect = new ReactiveEffect(fn, options.scheduler); // 创建响应式的effect
 
   _effect.run(); // 默认先执行一次
+
+  const runner = _effect.run.bind(_effect); // 绑定this执行
+
+  runner.effect = _effect; // 将effect挂载到runner函数上
+  return runner;
 }
 
 // 一个effect对应多个属性，一个属性对应多个effect
@@ -89,7 +100,12 @@ export function trigger(target, type, key, value, oldValue) {
     effects.forEach((effect) => {
       // 我们在执行effect的时候，又要执行自己，那我们需要屏蔽掉，不要无限调用
       if (effect !== activeEffect) {
-        effect.run();
+        if (effect.scheduler) {
+          // 如果传入了scheduler函数，则用用户的
+          effect.scheduler();
+        } else {
+          effect.run();
+        }
       }
     });
   }
