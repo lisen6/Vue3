@@ -9,15 +9,25 @@
 </head>
 
 <body>
-    <script src="../../../node_modules/@vue/reactivity/dist//reactivity.global.js"></script>
-    <!-- <script src="./reactivity.global.js"></script> -->
+    <!-- <script src="../../../node_modules/@vue/reactivity/dist//reactivity.global.js"></script> -->
+    <script src="./reactivity.global.js"></script>
     <div id="app"></div>
     <script>
-        const { effect, reactive } = VueReactivity
+        const { effect, reactive, computed } = VueReactivity
 
         const state = reactive({ firstName: 'li', lastName: 'sen' })
 
-        const fullName = computed(() => state.firstName + state.lastName)
+        const fullName = computed(() => {
+            return state.firstName + state.lastName
+        })
+
+        effect(() => {
+            app.innerHTML = fullName.value
+        })
+
+        setTimeout(() => {
+            state.lastName = 'sensen'
+        }, 2000)
     </script>
 </body>
 

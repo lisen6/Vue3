@@ -18,7 +18,7 @@ export const mutableHandlers = {
     track(target, "get", key);
     let res = Reflect.get(target, key, receiver);
 
-    if (isObject) {
+    if (isObject(res)) {
       return reactive(res); // 深度代理，当访问的属性是个对象的时候，要再次代理这个对象
     }
     return res;

@@ -8,7 +8,7 @@ function cleanUpEffect(effect) {
   effect.deps.length = 0;
 }
 
-class ReactiveEffect {
+export class ReactiveEffect {
   public parent = null;
   public deps = []; // 记录当前effect被哪些属性收集了
   public active = true; // effect默认是激活状态
@@ -81,11 +81,16 @@ export function track(target, type, key) {
   if (!dep) {
     depsMap.set(key, (dep = new Set()));
   }
+  trackEffects(dep);
+}
 
-  let shouldTrack = !dep.has(activeEffect);
-  if (shouldTrack) {
-    dep.add(activeEffect);
-    activeEffect.deps.push(dep); // 让effect记录对应的dep（Set数据结构）， 稍后清理的时候会用到
+export function trackEffects(dep) {
+  if (activeEffect) {
+    let shouldTrack = !dep.has(activeEffect);
+    if (shouldTrack) {
+      dep.add(activeEffect);
+      activeEffect.deps.push(dep); // 让effect记录对应的dep（Set数据结构）， 稍后清理的时候会用到
+    }
   }
 }
 
@@ -96,17 +101,21 @@ export function trigger(target, type, key, value, oldValue) {
   let effects = depsMap.get(key); // 找到属性对应的effect
 
   if (effects) {
-    effects = new Set(effects);
-    effects.forEach((effect) => {
-      // 我们在执行effect的时候，又要执行自己，那我们需要屏蔽掉，不要无限调用
-      if (effect !== activeEffect) {
-        if (effect.scheduler) {
-          // 如果传入了scheduler函数，则用用户的
-          effect.scheduler();
-        } else {
-          effect.run();
-        }
-      }
-    });
+    triggerEffects(effects);
   }
+}
+
+export function triggerEffects(effects) {
+  effects = new Set(effects);
+  effects.forEach((effect) => {
+    // 我们在执行effect的时候，又要执行自己，那我们需要屏蔽掉，不要无限调用
+    if (effect !== activeEffect) {
+      if (effect.scheduler) {
+        // 如果传入了scheduler函数，则用用户的
+        effect.scheduler();
+      } else {
+        effect.run();
+      }
+    }
+  });
 }
