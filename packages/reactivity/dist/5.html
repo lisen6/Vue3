@@ -14,16 +14,19 @@
     <script src="./reactivity.global.js"></script>
     <div id="app"></div>
     <script>
-        const { reactive, ref, effect, toRefs, proxyRefs } = VueReactivity // reactive只支持对象
+        const { reactive, ref, effect, toRefs } = VueReactivity // reactive只支持对象
 
-        let name = ref('清华')
-        let age = ref('818')
+        const state = reactive({ school: '清华', name: '计算机' })
 
-        let school = proxyRefs({ name, age, a: 1 })
+        const { school, name } = toRefs(state)
 
         effect(() => {
-            app.innerHTML = school.name + school.age + school.a
+            app.innerHTML = `${school.value} + ${name.value}`
         })
+
+        setTimeout(() => {
+            name.value = '计算机1'
+        }, 1000)
     </script>
 </body>
 
