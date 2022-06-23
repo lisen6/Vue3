@@ -1,0 +1,37 @@
+// 虚拟 DOM 必备 type props children
+import { isString, ShapeFlags, isArray } from "@vue/shared";
+
+export function isVnode(val) {
+  return !!(val && val.__v_isVnode);
+}
+
+// 虚拟节点有很多：组件的，元素的，文本的 h('h1')
+export function createVnode(type, props, children = null) {
+  // 组合方案 shapeFlag  我想知道一个元素中包含的是多个儿子还是一个儿子  标识
+
+  let shapeFlag = isString(type) ? ShapeFlags.ELEMENT : 0;
+
+  // 虚拟 DOM
+  const vnode = {
+    __v_isVnode: true,
+    shapeFlag,
+    type,
+    props,
+    children,
+    key: props?.["key"],
+    el: null, // 虚拟节点上对应的真实节点
+  };
+
+  if (children) {
+    if (isArray(children)) {
+      type = ShapeFlags.ARRAY_CHILDREN;
+    } else {
+      children = String(children);
+      type = ShapeFlags.TEXT_CHILDREN;
+    }
+
+    vnode.shapeFlag |= type;
+  }
+
+  return vnode;
+}
