@@ -23,6 +23,7 @@ export function createVnode(type, props, children = null) {
   };
 
   if (children) {
+    let type = 0;
     if (isArray(children)) {
       type = ShapeFlags.ARRAY_CHILDREN;
     } else {

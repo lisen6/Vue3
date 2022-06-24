@@ -15,7 +15,7 @@
     <script>
         let { createRenderer, h, render } = VueRuntimeDOM
 
-        console.log(createRenderer, h, render)
+        // console.log(createRenderer, h, render)
         // 渲染的是虚拟DOM
         // let renderer = createRenderer({
         //     createElement(element) {
@@ -34,7 +34,7 @@
         // })
 
 
-        render(h('h1', { style: { color: 'red' } }, 'hello'), app)
+        render(h('h1', { style: { color: 'red' }, onClick: () => alert(123) }, h('span', 'world')), app)
     </script>
 
 </body>
