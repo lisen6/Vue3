@@ -1,6 +1,8 @@
 // 虚拟 DOM 必备 type props children
 import { isString, ShapeFlags, isArray } from "@vue/shared";
 
+export const Text = Symbol("Text");
+
 export function isVnode(val) {
   return !!(val && val.__v_isVnode);
 }
