@@ -13,7 +13,7 @@
     <!-- <script src="../../../node_modules/@vue/runtime-dom/dist/runtime-dom.global.js"></script> -->
     <script src="./runtime-dom.global.js"></script>
     <script>
-        let { createRenderer, h, render } = VueRuntimeDOM
+        let { createRenderer, h, render, Text } = VueRuntimeDOM
 
         // console.log(createRenderer, h, render)
         // 渲染的是虚拟DOM
@@ -34,7 +34,12 @@
         // })
 
 
-        render(h('h1', { style: { color: 'red' }, onClick: () => alert(123) }, h('span', 'world')), app)
+        render(h('h1', { style: { color: 'orange' } }, ['world', 'world']), app)
+
+        setTimeout(() => {
+            render(h('h1', { style: { color: 'blue', background: 'green' } }, '123'), app)
+        }, 1000)
+
     </script>
 
 </body>

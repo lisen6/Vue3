@@ -25,15 +25,14 @@ export function h(type, propsChildren, children) {
     // 为什么要将儿子包装成数组，因为元素可以循环创建。文本不需要包装
     if (isObject(propsChildren) && !isArray(propsChildren)) {
       if (isVnode(propsChildren)) {
-        // h('span')
-        // 虚拟节点就包装成数组
+        // h('div', h('span'))
         return createVnode(type, null, [propsChildren]);
       }
-      // {style: {color: 'red'}
+      // h('div', {style: {color: 'red'}})
       return createVnode(type, propsChildren); // 属性
     } else {
-      // 'hello'
-      // [h('span'), h('span')]
+      // h('div', 'hello')
+      // h('div', [h('span'), h('span')])
       return createVnode(type, null, propsChildren); // 文本 || 孩子
     }
   } else {

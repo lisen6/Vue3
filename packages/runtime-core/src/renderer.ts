@@ -1,6 +1,6 @@
 import { isString } from "./../../shared/src/index";
 import { ShapeFlags } from "@vue/shared";
-import { createVnode, Text } from "./vnode";
+import { createVnode, isSameVnode, Text } from "./vnode";
 
 export function createRenderer(renderOptions) {
   const {
@@ -20,16 +20,18 @@ export function createRenderer(renderOptions) {
   } = renderOptions;
 
   // 判断儿子节点是 vnode 还是 Text
-  const normalize = (child) => {
-    if (isString(child)) {
-      return createVnode(Text, null, child);
+  const normalize = (children, i) => {
+    if (isString(children[i])) {
+      // 把字符串的儿子转成vnode
+      let vnode = createVnode(Text, null, children[i]);
+      children[i] = vnode;
     }
-    return child;
+    return children[i];
   };
 
   const mountChildren = (children, container) => {
     for (let i = 0; i < children.length; i++) {
-      let child = normalize(children[i]);
+      let child = normalize(children, i);
       patch(null, child, container);
     }
   };
@@ -57,6 +59,106 @@ export function createRenderer(renderOptions) {
     if (n1 == null) {
       // 初始化 文本
       hostInsert((n2.el = hostCreateText(n2.children)), container);
+    } else {
+      // 文本的内容变化了，复用老节点
+      let el = (n2.el = n1.el);
+      if (n1.children !== n2.children) {
+        hostSetText(el, n2.children); // 文本的更新
+      }
+    }
+  };
+
+  // 更新属性
+  const patchProps = (oldProps, newProps, el) => {
+    // 用新属性覆盖老属性
+    for (let key in newProps) {
+      hostPatchProp(el, key, oldProps[key], newProps[key]);
+    }
+
+    // 老的里面有，新的里面没有，清空老的
+    for (let key in oldProps) {
+      if (newProps[key] == null) {
+        hostPatchProp(el, key, oldProps[key], null);
+      }
+    }
+  };
+
+  const unmountChildren = (children) => {
+    for (let i = 0; i < children.length; i++) {
+      unmount(children[i]);
+    }
+  };
+
+  const patchChildren = (n1, n2, el) => {
+    console.log(n1, n2);
+    // 比较两个虚拟节点的儿子的差异，el就是当前的父节点
+    const c1 = n1.children;
+    const c2 = n2.children;
+
+    const prevShapeFlag = n1.shapeFlag;
+    const shapeFlag = n2.shapeFlag;
+    // 比较两个儿子列表的差异
+    // 文本、null、数组
+
+    // 新儿子  老儿子
+    // -文本    数组（删除老儿子，设置文本内容）
+    // -文本    文本（更新文本）
+    // -数组    数组（diff算法）
+    // 数组    文本（清空文本，进行挂载）
+    // -空      数组（删除所有儿子）
+    // 空      文本（清空文本）
+    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 新的是文本，老的是数组
+        // 删除所有子节点
+        unmountChildren(c1);
+      }
+      // 新的是文本，老的是文本
+      if (c1 !== c2) {
+        hostSetElementText(el, c2);
+      }
+    } else {
+      // 现在为数组或空
+      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 新的是数组，老的也是数组
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          // diff算法
+        } else {
+          // 新的不是数组，老的是数组（文本和空）
+          // 删除老的数组，放入新的
+          unmountChildren(c1);
+        }
+      } else {
+        if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+          hostSetElementText(el, "");
+        }
+        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+          mountChildren(c2, el);
+        }
+      }
+    }
+  };
+
+  // 先复用节点，再比较属性，再比较儿子
+  const patchElement = (n1, n2) => {
+    let el = (n2.el = n1.el);
+
+    let oldProps = n1.props || {};
+    let newProps = n2.props || {};
+
+    patchProps(oldProps, newProps, el);
+
+    patchChildren(n1, n2, el);
+  };
+
+  const processElement = (n1, n2, container) => {
+    if (n1 == null) {
+      // 初次渲染
+      // 后续还有组件的初次渲染，目前是元素的初始化渲染
+      mountElement(n2, container);
+    } else {
+      // 元素更新流程
+      patchElement(n1, n2);
     }
   };
 
@@ -64,21 +166,22 @@ export function createRenderer(renderOptions) {
     // n2有可能是vnode，也有可能是字符串
     if (n1 === n2) return;
 
+    if (n1 && !isSameVnode(n1, n2)) {
+      // 判断两个元素是否相同，不相同卸载再添加
+      unmount(n1); // 删除老的
+      n1 = null;
+    }
+
     const { type, shapeFlag } = n2;
-    if (n1 == null) {
-      // 初次渲染
-      // 后续还有组件的初次渲染，目前是元素的初始化渲染
-      switch (type) {
-        case Text:
-          processText(n1, n2, container);
-          break;
-        default:
-          if (shapeFlag & ShapeFlags.ELEMENT) {
-            mountElement(n2, container);
-          }
-      }
-    } else {
-      // 更新流程
+
+    switch (type) {
+      case Text:
+        processText(n1, n2, container);
+        break;
+      default:
+        if (shapeFlag & ShapeFlags.ELEMENT) {
+          processElement(n1, n2, container);
+        }
     }
   };
 
@@ -107,3 +210,10 @@ export function createRenderer(renderOptions) {
     render,
   };
 }
+
+/**
+ * 1.DOM更新的了逻辑思考
+ * - DOM更新前后完全没关心，删除老的，添加新的
+ * - 老的跟新的意义，复用，属性不一样，对比属性，更新属性
+ * - 比儿子
+ */

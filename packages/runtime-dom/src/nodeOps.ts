@@ -12,7 +12,6 @@ export const nodeOps = {
   },
   // 元素中的内容
   setElementText(el, text) {
-    console.log(el, text);
     el.textContent = text;
   },
   // 文本节点
