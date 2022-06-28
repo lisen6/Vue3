@@ -32,11 +32,11 @@ export function createRenderer(renderOptions) {
   const mountChildren = (children, container) => {
     for (let i = 0; i < children.length; i++) {
       let child = normalize(children, i);
-      patch(null, child, container);
+      patch(null, child, container, null);
     }
   };
 
-  const mountElement = (vnode, container) => {
+  const mountElement = (vnode, container, anchor) => {
     let { type, props, children, shapeFlag } = vnode;
     let el = (vnode.el = hostCreateElement(type)); // 将真实元素挂载到这个虚拟节点上，后续更新复用该节点
     if (props) {
@@ -52,7 +52,7 @@ export function createRenderer(renderOptions) {
       mountChildren(children, el);
     }
 
-    hostInsert(el, container);
+    hostInsert(el, container, anchor);
   };
 
   const processText = (n1, n2, container) => {
@@ -78,7 +78,7 @@ export function createRenderer(renderOptions) {
     // 老的里面有，新的里面没有，清空老的
     for (let key in oldProps) {
       if (newProps[key] == null) {
-        hostPatchProp(el, key, oldProps[key], null);
+        hostPatchProp(el, key, oldProps[key], undefined);
       }
     }
   };
@@ -89,8 +89,63 @@ export function createRenderer(renderOptions) {
     }
   };
 
+  // 比较两个儿子差异
+  const patchKeyedChildren = (c1, c2, el) => {
+    let i = 0;
+    let e1 = c1.length - 1;
+    let e2 = c2.length - 1;
+
+    // 从头开始比对 尽可能减少diff的比对
+    while (i <= e1 && i <= e2) {
+      const n1 = c1[i];
+      const n2 = c2[i];
+      if (isSameVnode(n1, n2)) {
+        patch(n1, n2, el, null); // 这样做就是比较两个节点的属性和子节点
+      } else {
+        break;
+      }
+      i++;
+    }
+
+    // 从尾部开始比较
+    while (i <= e1 && i <= e2) {
+      const n1 = c1[e1];
+      const n2 = c2[e2];
+      if (isSameVnode(n1, n2)) {
+        patch(n1, n2, el, null);
+      } else {
+        break;
+      }
+      e1--;
+      e2--;
+    }
+
+    // 同序列挂载
+    // i比e1大说明有新增的节点
+    // i比e2之间的是新增的部分
+    if (i > e1) {
+      if (i <= e2) {
+        while (i <= e2) {
+          const nextPos = e2 + 1;
+          // 根据下一个节点的索引看参照物，来判断是insertBefore还是appendChild
+          const anchor = nextPos < c2.length ? c2[nextPos].el : null;
+          patch(null, c2[i], el, anchor);
+          i++;
+        }
+      }
+    } else if (i > e2) {
+      // i比e2大说明有要卸载的节点
+      // 卸载的部分就是i到e1之间的节点
+      if (i <= e1) {
+        while (i <= e1) {
+          unmount(c1[i]);
+          i++;
+        }
+      }
+    }
+  };
+
   const patchChildren = (n1, n2, el) => {
-    console.log(n1, n2);
     // 比较两个虚拟节点的儿子的差异，el就是当前的父节点
     const c1 = n1.children;
     const c2 = n2.children;
@@ -123,6 +178,7 @@ export function createRenderer(renderOptions) {
         // 新的是数组，老的也是数组
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
           // diff算法
+          patchKeyedChildren(c1, c2, el);
         } else {
           // 新的不是数组，老的是数组（文本和空）
           // 删除老的数组，放入新的
@@ -151,18 +207,18 @@ export function createRenderer(renderOptions) {
     patchChildren(n1, n2, el);
   };
 
-  const processElement = (n1, n2, container) => {
+  const processElement = (n1, n2, container, anchor) => {
     if (n1 == null) {
       // 初次渲染
       // 后续还有组件的初次渲染，目前是元素的初始化渲染
-      mountElement(n2, container);
+      mountElement(n2, container, anchor);
     } else {
       // 元素更新流程
       patchElement(n1, n2);
     }
   };
 
-  const patch = (n1, n2, container) => {
+  const patch = (n1, n2, container, anchor) => {
     // n2有可能是vnode，也有可能是字符串
     if (n1 === n2) return;
 
@@ -180,7 +236,7 @@ export function createRenderer(renderOptions) {
         break;
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
-          processElement(n1, n2, container);
+          processElement(n1, n2, container, anchor);
         }
     }
   };
@@ -199,7 +255,7 @@ export function createRenderer(renderOptions) {
       }
     } else {
       // 初始化渲染逻辑 || 更新逻辑
-      patch(container._vnode || null, vnode, container);
+      patch(container._vnode || null, vnode, container, null);
     }
     container._vnode = vnode;
 

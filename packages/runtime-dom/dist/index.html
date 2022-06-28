@@ -34,10 +34,16 @@
         // })
 
 
-        render(h('h1', { style: { color: 'orange' } }, ['world', 'world']), app)
+        render(
+            h('h1', { style: { color: 'orange' } },
+                [h('li', { key: 'd' }, 'd'), h('li', { key: 'e' }, 'e'), h('li', { key: 'a' }, 'a'), h('li', { key: 'b' }, 'b'), h('li', { key: 'c' }, 'c')])
+            , app)
 
         setTimeout(() => {
-            render(h('h1', { style: { color: 'blue', background: 'green' } }, '123'), app)
+            render(
+                h('h1', { style: { color: 'blue', background: 'green' } },
+                    [h('li', { key: 'a' }, 'a'), h('li', { key: 'b' }, 'b'), h('li', { key: 'c' }, 'c')]),
+                app)
         }, 1000)
 
     </script>
