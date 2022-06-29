@@ -120,6 +120,7 @@ export function createRenderer(renderOptions) {
       e2--;
     }
 
+    console.log(i, e1, e2);
     // 同序列挂载
     // i比e1大说明有新增的节点
     // i比e2之间的是新增的部分
@@ -141,6 +142,45 @@ export function createRenderer(renderOptions) {
           unmount(c1[i]);
           i++;
         }
+      }
+    }
+
+    // 乱序对比，新节点创建映射表  Map{vnode.key: index}
+    let s1 = i;
+    let s2 = i;
+    const keyToNewIndexMap = new Map();
+    for (let i = s2; i <= e2; i++) {
+      keyToNewIndexMap.set(c2[i].key, i);
+    }
+
+    // 循环老元素，看一下新的里面有没有，如果有说明要patch，没有添加到列表中，老的有新的没有要删除，
+    const toBePatched = e2 - s2 + 1;
+    const newIndexToOldIndex = new Array(toBePatched).fill(0); // 记录比对过的映射表
+    for (let i = s1; i <= e1; i++) {
+      const oldChild = c1[i]; // 老的节点
+      let newIndex = keyToNewIndexMap.get(oldChild.key); // 用老的孩子去新的里面去找
+
+      if (!newIndex) {
+        unmount(oldChild); // 映射表里找不到的删掉
+      } else {
+        // 如果数组里放的值大于0, 说明是已经patch过了
+        newIndexToOldIndex[newIndex - s2] = i + 1; // 用来标记当前所patch过的结果
+        patch(oldChild, c2[newIndex], el, null);
+      }
+    }
+
+    // 需要移动位置
+    for (let i = toBePatched - 1; i >= 0; i--) {
+      let index = i + s2;
+      let current = c2[index];
+      let anchor = index + 1 < c2.length ? c2[index + 1].el : null;
+
+      if (newIndexToOldIndex[i] == 0) {
+        // 创建
+        patch(null, current, el, anchor);
+      } else {
+        // 不是0就说明已经比对过属性跟儿子了
+        hostInsert(current.el, el, anchor, null);
       }
     }
   };

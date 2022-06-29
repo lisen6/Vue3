@@ -264,6 +264,7 @@ var VueRuntimeDOM = (() => {
         e1--;
         e2--;
       }
+      console.log(i, e1, e2);
       if (i > e1) {
         if (i <= e2) {
           while (i <= e2) {
@@ -279,6 +280,34 @@ var VueRuntimeDOM = (() => {
             unmount(c1[i]);
             i++;
           }
+        }
+      }
+      let s1 = i;
+      let s2 = i;
+      const keyToNewIndexMap = /* @__PURE__ */ new Map();
+      for (let i2 = s2; i2 <= e2; i2++) {
+        keyToNewIndexMap.set(c2[i2].key, i2);
+      }
+      const toBePatched = e2 - s2 + 1;
+      const newIndexToOldIndex = new Array(toBePatched).fill(0);
+      for (let i2 = s1; i2 <= e1; i2++) {
+        const oldChild = c1[i2];
+        let newIndex = keyToNewIndexMap.get(oldChild.key);
+        if (!newIndex) {
+          unmount(oldChild);
+        } else {
+          newIndexToOldIndex[newIndex - s2] = i2 + 1;
+          patch(oldChild, c2[newIndex], el, null);
+        }
+      }
+      for (let i2 = toBePatched - 1; i2 >= 0; i2--) {
+        let index = i2 + s2;
+        let current = c2[index];
+        let anchor = index + 1 < c2.length ? c2[index + 1].el : null;
+        if (newIndexToOldIndex[i2] == 0) {
+          patch(null, current, el, anchor);
+        } else {
+          hostInsert(current.el, el, anchor, null);
         }
       }
     };
