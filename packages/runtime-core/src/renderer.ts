@@ -1,6 +1,7 @@
 import { isString } from "./../../shared/src/index";
 import { ShapeFlags } from "@vue/shared";
 import { createVnode, isSameVnode, Text } from "./vnode";
+import { getSequence } from "./sequence";
 
 export function createRenderer(renderOptions) {
   const {
@@ -155,7 +156,8 @@ export function createRenderer(renderOptions) {
 
     // 循环老元素，看一下新的里面有没有，如果有说明要patch，没有添加到列表中，老的有新的没有要删除，
     const toBePatched = e2 - s2 + 1;
-    const newIndexToOldIndex = new Array(toBePatched).fill(0); // 记录比对过的映射表
+    const newIndexToOldIndexMap = new Array(toBePatched).fill(0); // 记录比对过的映射表
+
     for (let i = s1; i <= e1; i++) {
       const oldChild = c1[i]; // 老的节点
       let newIndex = keyToNewIndexMap.get(oldChild.key); // 用老的孩子去新的里面去找
@@ -164,23 +166,31 @@ export function createRenderer(renderOptions) {
         unmount(oldChild); // 映射表里找不到的删掉
       } else {
         // 如果数组里放的值大于0, 说明是已经patch过了
-        newIndexToOldIndex[newIndex - s2] = i + 1; // 用来标记当前所patch过的结果
+        newIndexToOldIndexMap[newIndex - s2] = i + 1; // 用来标记当前所patch过的结果
         patch(oldChild, c2[newIndex], el, null);
       }
     }
 
+    // 获取最长递增子序列
+    let increment = getSequence(newIndexToOldIndexMap);
+    console.log(increment);
     // 需要移动位置
+    let j = increment.length - 1;
     for (let i = toBePatched - 1; i >= 0; i--) {
       let index = i + s2;
       let current = c2[index];
       let anchor = index + 1 < c2.length ? c2[index + 1].el : null;
 
-      if (newIndexToOldIndex[i] == 0) {
+      if (newIndexToOldIndexMap[i] == 0) {
         // 创建
         patch(null, current, el, anchor);
       } else {
-        // 不是0就说明已经比对过属性跟儿子了
-        hostInsert(current.el, el, anchor, null);
+        if (i !== increment[j]) {
+          // 不是0就说明已经比对过属性跟儿子了
+          hostInsert(current.el, el, anchor, null);
+        } else {
+          j--;
+        }
       }
     }
   };
