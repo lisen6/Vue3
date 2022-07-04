@@ -12,7 +12,7 @@ export class ReactiveEffect {
   public parent = null;
   public deps = []; // 记录当前effect被哪些属性收集了
   public active = true; // effect默认是激活状态
-  constructor(public fn, public scheduler) {}
+  constructor(public fn, public scheduler?) {}
   run() {
     // run 执行effect
     if (!this.active) {

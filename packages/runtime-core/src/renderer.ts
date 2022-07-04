@@ -1,7 +1,9 @@
 import { isString } from "./../../shared/src/index";
 import { ShapeFlags } from "@vue/shared";
-import { createVnode, isSameVnode, Text } from "./vnode";
+import { createVnode, isSameVnode, Text, Fragment } from "./vnode";
 import { getSequence } from "./sequence";
+import { reactive, ReactiveEffect } from "@vue/reactivity";
+import { queueJob } from "./scheduler";
 
 export function createRenderer(renderOptions) {
   const {
@@ -121,7 +123,6 @@ export function createRenderer(renderOptions) {
       e2--;
     }
 
-    console.log(i, e1, e2);
     // 同序列挂载
     // i比e1大说明有新增的节点
     // i比e2之间的是新增的部分
@@ -173,7 +174,6 @@ export function createRenderer(renderOptions) {
 
     // 获取最长递增子序列
     let increment = getSequence(newIndexToOldIndexMap);
-    console.log(increment);
     // 需要移动位置
     let j = increment.length - 1;
     for (let i = toBePatched - 1; i >= 0; i--) {
@@ -268,6 +268,60 @@ export function createRenderer(renderOptions) {
     }
   };
 
+  const processFragment = (n1, n2, container, anchor) => {
+    if (n1 == null) {
+      mountChildren(n2.children, container);
+    } else {
+      patchChildren(n1, n2, container);
+    }
+  };
+
+  // 挂载组件
+  const mountComponent = (vnode, container, anchor) => {
+    let { data = () => ({}), render } = vnode.type; // 用户组件写的内容
+    const state = reactive(data());
+
+    // 组件的实例
+    const instance = {
+      state,
+      vnode,
+      subTree: null, // 渲染的组件内容
+      isMounted: false,
+      update: null,
+    };
+
+    const componentUpdateFn = () => {
+      // 区分初始化还是更新
+      if (!instance.isMounted) {
+        const subTree = render.call(state);
+        patch(null, subTree, container, anchor); // 创造了subTree的真实节点
+        instance.subTree = subTree;
+        instance.isMounted = true;
+      } else {
+        // 组件内部更新（组件的render方法重新执行）
+        const subTree = render.call(state);
+        patch(instance.subTree, subTree, container, anchor);
+        instance.subTree = subTree;
+      }
+    };
+
+    const effect = new ReactiveEffect(componentUpdateFn, () => {
+      queueJob(instance.update);
+    });
+
+    // 将组件强制更新的逻辑保存到了组件的实例上
+    let update = (instance.update = effect.run.bind(effect)); // 让组件强制重新渲染
+    update();
+  };
+
+  const processComponent = (n1, n2, container, anchor) => {
+    if (n1 == null) {
+      mountComponent(n2, container, anchor);
+    } else {
+      // 组件更新靠的是props
+    }
+  };
+
   const patch = (n1, n2, container, anchor) => {
     // n2有可能是vnode，也有可能是字符串
     if (n1 === n2) return;
@@ -284,9 +338,14 @@ export function createRenderer(renderOptions) {
       case Text:
         processText(n1, n2, container);
         break;
+      case Fragment:
+        processFragment(n1, n2, container, anchor);
+        break;
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(n1, n2, container, anchor);
+        } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          processComponent(n1, n2, container, anchor);
         }
     }
   };

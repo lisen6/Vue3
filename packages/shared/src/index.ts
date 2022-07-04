@@ -22,6 +22,7 @@ export const assign = Object.assign;
 export const enum ShapeFlags {
   // 最后要渲染的 element 类型
   ELEMENT = 1,
+  FUNCTIONAL_COMPONENT = 1 << 1,
   // 组件类型
   STATEFUL_COMPONENT = 1 << 2,
   // vnode 的 children 为 string 类型
@@ -30,4 +31,5 @@ export const enum ShapeFlags {
   ARRAY_CHILDREN = 1 << 4,
   // vnode 的 children 为 slots 类型
   SLOTS_CHILDREN = 1 << 5,
+  COMPONENT = ShapeFlags.STATEFUL_COMPONENT | ShapeFlags.FUNCTIONAL_COMPONENT,
 }

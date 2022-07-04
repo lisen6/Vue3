@@ -13,56 +13,25 @@
     <!-- <script src="../../../node_modules/@vue/runtime-dom/dist/runtime-dom.global.js"></script> -->
     <script src="./runtime-dom.global.js"></script>
     <script>
-        let { createRenderer, h, render, Text } = VueRuntimeDOM
+        let { createRenderer, h, render, Text, Fragment } = VueRuntimeDOM
 
-        // console.log(createRenderer, h, render)
-        // 渲染的是虚拟DOM
-        // let renderer = createRenderer({
-        //     createElement(element) {
-        //         return document.createElement(element)
-        //     },
-        //     setElementText(el, text) {
-        //         console.log(el, text)
-        //         el.innerHTML = text;
-        //     },
-        //     insert(el, container) {
-        //         container.appendChild(el)
-        //     },
-        //     patchProp(el, key, prevValue, nextValue) {
-        //         console.log(el, key, prevValue, nextValue)
-        //     }
-        // })
+        const VueComponent = {
+            data() {
+                return {
+                    name: 'lisen',
+                    age: 18,
+                }
+            },
+            render() {
+                setTimeout(() => {
+                    this.age++
+                }, 1000)
+                return h('p', `${this.name}今年${this.age}岁了`)
+            }
+        }
 
+        render(h(VueComponent), app)
 
-        render(
-            h('h1', { style: { color: 'orange' } },
-                [
-                    h('li', { key: 'a' }, 'a'),
-                    h('li', { key: 'b' }, 'b'),
-                    h('li', { key: 'c' }, 'c'),
-                    h('li', { key: 'd' }, 'd'),
-                    h('li', { key: 'e' }, 'e'),
-                    h('li', { key: 'ee' }, 'ee'),
-                    h('li', { key: 'f' }, 'f'),
-                    h('li', { key: 'g' }, 'g'),
-                ])
-            , app)
-
-        setTimeout(() => {
-            render(
-                h('h1', { style: { color: 'blue' } },
-                    [
-                        h('li', { key: 'a' }, 'a'),
-                        h('li', { key: 'b' }, 'b'),
-                        h('li', { key: 'e' }, 'e'),
-                        h('li', { key: 'c' }, 'c'),
-                        h('li', { key: 'd' }, 'd'),
-                        h('li', { key: 'h' }, 'h'),
-                        h('li', { key: 'f' }, 'f'),
-                        h('li', { key: 'g' }, 'g'),
-                    ]),
-                app)
-        }, 1000)
 
     </script>
 
