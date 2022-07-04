@@ -1,9 +1,10 @@
-import { isString } from "./../../shared/src/index";
-import { ShapeFlags } from "@vue/shared";
+import { ShapeFlags, isString, hasOwn } from "@vue/shared";
 import { createVnode, isSameVnode, Text, Fragment } from "./vnode";
 import { getSequence } from "./sequence";
 import { reactive, ReactiveEffect } from "@vue/reactivity";
 import { queueJob } from "./scheduler";
+import { createComponentInstance, setupComponent } from "./component";
+import { updateProps } from "./componentProps";
 
 export function createRenderer(renderOptions) {
   const {
@@ -278,28 +279,28 @@ export function createRenderer(renderOptions) {
 
   // 挂载组件
   const mountComponent = (vnode, container, anchor) => {
-    let { data = () => ({}), render } = vnode.type; // 用户组件写的内容
-    const state = reactive(data());
+    // 1) 创造一个组件实例
+    let instance = (vnode.component = createComponentInstance(vnode));
 
-    // 组件的实例
-    const instance = {
-      state,
-      vnode,
-      subTree: null, // 渲染的组件内容
-      isMounted: false,
-      update: null,
-    };
+    // 2) 给实例赋值
+    setupComponent(instance);
 
+    // 3) 创建一个effect
+    setupRenderEffect(instance, container, anchor);
+  };
+
+  const setupRenderEffect = (instance, container, anchor) => {
+    const { render } = instance;
     const componentUpdateFn = () => {
       // 区分初始化还是更新
       if (!instance.isMounted) {
-        const subTree = render.call(state);
+        const subTree = render.call(instance.proxy);
         patch(null, subTree, container, anchor); // 创造了subTree的真实节点
         instance.subTree = subTree;
         instance.isMounted = true;
       } else {
         // 组件内部更新（组件的render方法重新执行）
-        const subTree = render.call(state);
+        const subTree = render.call(instance.proxy);
         patch(instance.subTree, subTree, container, anchor);
         instance.subTree = subTree;
       }
@@ -314,11 +315,22 @@ export function createRenderer(renderOptions) {
     update();
   };
 
+  const updateComponent = (n1, n2) => {
+    // props属性的更新会到导致页面重新渲染
+    const instance = (n2.component = n1.component); // 对于元素而言，复用的是DOM节点，对应组件来说复用的是实例
+
+    const { props: prevProps } = n1;
+    const { props: nextProps } = n2;
+
+    updateProps(instance, prevProps, nextProps); // 组件属性更新
+  };
+
   const processComponent = (n1, n2, container, anchor) => {
     if (n1 == null) {
       mountComponent(n2, container, anchor);
     } else {
       // 组件更新靠的是props
+      updateComponent(n1, n2);
     }
   };
 

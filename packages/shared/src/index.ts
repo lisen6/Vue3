@@ -18,6 +18,10 @@ export const isArray = Array.isArray;
 
 export const assign = Object.assign;
 
+export const hasOwnProperty = Object.prototype.hasOwnProperty;
+
+export const hasOwn = (value, key) => hasOwnProperty.call(value, key);
+
 // 组件的类型
 export const enum ShapeFlags {
   // 最后要渲染的 element 类型

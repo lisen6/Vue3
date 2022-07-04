@@ -13,11 +13,11 @@ export function queueJob(job) {
     resolvePromise.then(() => {
       isFlushing = false;
       let task = queue.slice(0);
+      queue.length = 0;
       for (let i = 0; i < task.length; i++) {
         let job = task[i];
         job();
       }
-      queue.length = 0;
       task.length = 0;
     });
   }
