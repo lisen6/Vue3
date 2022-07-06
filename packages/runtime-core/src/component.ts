@@ -1,4 +1,5 @@
-import { reactive } from "@vue/reactivity";
+import { isObject, ShapeFlags } from "@vue/shared";
+import { proxyRefs, reactive } from "@vue/reactivity";
 import { hasOwn, isFunction } from "@vue/shared";
 import { initProps } from "./componentProps";
 
@@ -15,6 +16,8 @@ export function createComponentInstance(vnode) {
     attrs: {},
     proxy: null,
     render: null,
+    setupState: {},
+    slots: {}, // 插槽相关
   };
 
   return instance;
@@ -22,13 +25,16 @@ export function createComponentInstance(vnode) {
 
 const publicPropertyMap = {
   $attrs: (i) => i.attrs,
+  $slots: (i) => i.slots,
 };
 
 const publicInstanceProxy = {
   get(target, key) {
-    const { data, props } = target;
+    const { data, props, setupState } = target;
     if (data && hasOwn(data, key)) {
       return data[key];
+    } else if (hasOwn(setupState, key)) {
+      return setupState[key];
     } else if (props && hasOwn(props, key)) {
       return props[key];
     }
@@ -38,10 +44,12 @@ const publicInstanceProxy = {
     }
   },
   set(target, key, value) {
-    const { data, props } = target;
+    const { data, props, setupState } = target;
     if (data && hasOwn(data, key)) {
       data[key] = value;
       return true;
+    } else if (hasOwn(setupState, key)) {
+      setupState[key] = value;
     } else if (props && hasOwn(props, key)) {
       console.warn("attempting to mutate prop" + (key as string));
       return false;
@@ -50,10 +58,19 @@ const publicInstanceProxy = {
   },
 };
 
+function initSlots(instance, children) {
+  if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+    instance.slots = children; // 保存插槽
+  }
+}
+
 export function setupComponent(instance) {
-  let { props, type } = instance.vnode;
+  let { props, type, children } = instance.vnode;
 
   initProps(instance, props);
+
+  // 初始化插槽
+  initSlots(instance, children);
 
   instance.proxy = new Proxy(instance, publicInstanceProxy);
 
@@ -65,5 +82,29 @@ export function setupComponent(instance) {
     instance.data = reactive(data.call(instance.proxy));
   }
 
-  instance.render = type.render;
+  let setup = type.setup;
+  if (setup) {
+    const setupContext = {
+      emit: (event, ...args) => {
+        // 事件的实现原理
+        const eventName = `on${event[0].toUpperCase() + event.slice(1)}`;
+        // 找到虚拟节点的props。里面存放了事件
+        const handler = instance.vnode.props[eventName];
+        handler && handler(...args);
+      },
+      attrs: instance.attrs,
+      slots: instance.slots,
+    };
+    const setupResult = setup(instance.props, setupContext);
+    if (isFunction(setupResult)) {
+      instance.render = setupResult;
+    } else if (isObject(setupResult)) {
+      // 对内部的ref取消.value取值
+      instance.setupState = proxyRefs(setupResult);
+    }
+  }
+
+  if (!instance.render) {
+    instance.render = type.render;
+  }
 }

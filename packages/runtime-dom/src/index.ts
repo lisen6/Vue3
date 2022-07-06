@@ -9,3 +9,5 @@ export function render(vnode, container) {
 }
 
 export * from "@vue/runtime-core";
+
+export * from "@vue/reactivity";

@@ -4,7 +4,7 @@ import { getSequence } from "./sequence";
 import { reactive, ReactiveEffect } from "@vue/reactivity";
 import { queueJob } from "./scheduler";
 import { createComponentInstance, setupComponent } from "./component";
-import { updateProps } from "./componentProps";
+import { updateProps, hasPropsChanged } from "./componentProps";
 
 export function createRenderer(renderOptions) {
   const {
@@ -255,6 +255,7 @@ export function createRenderer(renderOptions) {
 
     patchProps(oldProps, newProps, el);
 
+    console.log(n1, n2);
     patchChildren(n1, n2, el);
   };
 
@@ -289,6 +290,12 @@ export function createRenderer(renderOptions) {
     setupRenderEffect(instance, container, anchor);
   };
 
+  const updateComponentPreRedner = (instance, next) => {
+    instance.next = null;
+    instance.vnode = next;
+    updateProps(instance.props, next.props);
+  };
+
   const setupRenderEffect = (instance, container, anchor) => {
     const { render } = instance;
     const componentUpdateFn = () => {
@@ -299,6 +306,11 @@ export function createRenderer(renderOptions) {
         instance.subTree = subTree;
         instance.isMounted = true;
       } else {
+        let { next } = instance;
+        if (next) {
+          // 更新前，我也需要拿到最新的属性来进行更新
+          updateComponentPreRedner(instance, next);
+        }
         // 组件内部更新（组件的render方法重新执行）
         const subTree = render.call(instance.proxy);
         patch(instance.subTree, subTree, container, anchor);
@@ -315,14 +327,22 @@ export function createRenderer(renderOptions) {
     update();
   };
 
+  const shouldUpdateComponent = (n1, n2) => {
+    const { props: prevProps } = n1;
+    const { props: nextProps } = n2;
+    if (prevProps === nextProps) return false;
+    return hasPropsChanged(prevProps, nextProps);
+  };
+
   const updateComponent = (n1, n2) => {
     // props属性的更新会到导致页面重新渲染
     const instance = (n2.component = n1.component); // 对于元素而言，复用的是DOM节点，对应组件来说复用的是实例
 
-    const { props: prevProps } = n1;
-    const { props: nextProps } = n2;
-
-    updateProps(instance, prevProps, nextProps); // 组件属性更新
+    // 需要更新就调用组件的update
+    if (shouldUpdateComponent(n1, n2)) {
+      instance.next = n2;
+      instance.update(n1, n2);
+    }
   };
 
   const processComponent = (n1, n2, container, anchor) => {

@@ -24,7 +24,7 @@ export function initProps(instance, rawProps) {
   instance.attrs = attrs;
 }
 
-const hasPropsChanged = (prevProps = {}, nextProps = {}) => {
+export const hasPropsChanged = (prevProps = {}, nextProps = {}) => {
   const nextKeys = Object.keys(nextProps);
 
   // 比对属性前后长度是否一致
@@ -42,17 +42,15 @@ const hasPropsChanged = (prevProps = {}, nextProps = {}) => {
   return false;
 };
 
-export function updateProps(instance, prevProps, nextProps) {
+export function updateProps(prevProps, nextProps) {
   // 看一下属性有没有变化
-  // 值的变化，属性的个数是否变化
-  if (hasPropsChanged(prevProps, nextProps)) {
-    for (const key in nextProps) {
-      instance.props[key] = nextProps[key];
-    }
-    for (const key in instance.props) {
-      if (!hasOwn(nextProps, key)) {
-        delete instance.props[key];
-      }
+  // 值的变化，属性的个数是否变化{
+  for (const key in nextProps) {
+    prevProps[key] = nextProps[key];
+  }
+  for (const key in prevProps) {
+    if (!hasOwn(nextProps, key)) {
+      delete prevProps[key];
     }
   }
 }
