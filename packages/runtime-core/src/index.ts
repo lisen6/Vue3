@@ -1,4 +1,6 @@
-export { createRenderer } from "./renderer";
-export { h } from "./h";
-export { queueJob } from "./scheduler";
-export * from "./vnode";
+export { createRenderer } from './renderer'
+export { h } from './h'
+export { queueJob } from './scheduler'
+export * from './vnode'
+export * from './apiLifecycle'
+export * from './component'

@@ -13,43 +13,76 @@
     <!-- <script src="../../../node_modules/@vue/runtime-dom/dist/runtime-dom.global.js"></script> -->
     <script src="./runtime-dom.global.js"></script>
     <script>
-        let { createRenderer, h, render, Text, Fragment, ref } = VueRuntimeDOM
+        let {
+            reactive,
+            toRefs,
+            getCurrentInstance,
+            createRenderer,
+            h,
+            render,
+            Text,
+            Fragment,
+            ref,
+            onBeforeMount,
+            onMounted,
+            onBeforeUpdate,
+            onUpdated
+        } = VueRuntimeDOM
 
-        // const VueComponent = {
-        //     props: {
-        //         address: String
-        //     },
-        //     setup(props, { emit }) {
-        //         return () => {
-        //             return h('p', { onClick: () => { emit('xxx', 'ok') } }, 'hello')
-        //         }
-        //     }
-        // }
 
+        const useCounter = () => {
+            const state = reactive({
+                count: 1
+            })
 
-        // 插槽就是一个对象，放着映射关系，渲染组件的时候去映射表里查找
-        const MyComponent = {
-            render() {
-                return h(Fragment, [
-                    h('div', this.$slots.header()),
-                    h('div', this.$slots.footer())
-                ])
+            const handleClick = () => {
+                state.count++
+            }
+
+            onBeforeMount(() => {
+                console.log('beforeMount')
+                console.log(getCurrentInstance())
+            })
+
+            onMounted(() => {
+                console.log('onMounted')
+            })
+
+            onBeforeUpdate(() => {
+                console.log('beforeUpdate')
+            })
+
+            onUpdated(() => {
+                console.log('updated')
+            })
+
+            return {
+                state,
+                handleClick
             }
         }
 
         const VueComponent = {
+            setup() {
+                const {
+                    state: counter,
+                    handleClick
+                } = useCounter()
+                return {
+                    ...toRefs(counter),
+                    handleClick
+                }
+            },
             render() {
+                console.log(this.count)
                 // children如果是对象，说明是组件的插槽
-                return h(MyComponent, null, {
-                    header: () => h('p', 'header'),
-                    footer: () => h('p', 'footer')
-                })
+                return h('p', {
+                    onClick: this.handleClick
+                }, this.count.value)
             }
         }
 
-        render(h(VueComponent, { onXxx: (value) => alert(value) }), app)
-
-
+        render(h(VueComponent), app)
     </script>
 
 </body>
